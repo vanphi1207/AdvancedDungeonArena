@@ -1,5 +1,4 @@
-/.idea/
-**/pom.xml.versionsBackup
-**/target/
-!src/**/target/
-/Core/dependency-reduced-pom.xml
+.gradle
+.vscode
+bin/
+build/
