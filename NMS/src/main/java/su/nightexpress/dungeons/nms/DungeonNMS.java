@@ -6,8 +6,9 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
+import org.jspecify.annotations.NullMarked;
+
 import su.nightexpress.dungeons.api.dungeon.Dungeon;
 import su.nightexpress.dungeons.api.schema.SchemaBlock;
 import su.nightexpress.dungeons.api.type.MobFaction;
@@ -16,19 +17,23 @@ import java.io.File;
 import java.util.List;
 import java.util.function.Consumer;
 
+@NullMarked
 public interface DungeonNMS {
 
-    boolean isSupportedMob(@NotNull EntityType type);
+    boolean isSupportedMob(EntityType type);
 
-    @Nullable LivingEntity spawnMob(@NotNull Dungeon dungeon, @NotNull EntityType type, @NotNull MobFaction faction, @NotNull Location location, @NotNull Consumer<LivingEntity> function);
+    @Nullable
+    LivingEntity spawnMob(Dungeon dungeon, EntityType type, MobFaction faction, Location location,
+                          Consumer<LivingEntity> function);
 
-    @Nullable EntityType getSpawnEggType(@NotNull ItemStack itemStack);
+    @Nullable
+    EntityType getSpawnEggType(ItemStack itemStack);
 
-    //void setBlockStateFromTag(@NotNull Block block, @NotNull Object compoundTag);
+    //void setBlockStateFromTag( Block block,  Object compoundTag);
 
-    void setSchemaBlock(@NotNull World world, @NotNull SchemaBlock schemaBlock);
+    void setSchemaBlock(World world, SchemaBlock schemaBlock);
 
-    @NotNull List<SchemaBlock> loadSchema(@NotNull File file, boolean compressed);
+    List<SchemaBlock> loadSchema(File file, boolean compressed);
 
-    void saveSchema(@NotNull World world, @NotNull List<Block> blocks, @NotNull File file);
+    void saveSchema(World world, List<Block> blocks, File file);
 }
