@@ -70,6 +70,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 public class DungeonInstance implements Dungeon {
@@ -117,7 +118,43 @@ public class DungeonInstance implements Dungeon {
 
     @NotNull
     public UnaryOperator<String> replacePlaceholders() {
-        return str -> Placeholders.DUNGEON_INSTANCE.replacer(this).apply(this.replaceVariables().apply(str));
+        return str -> this.replaceTaskPlaceholders().apply(Placeholders.DUNGEON_INSTANCE.replacer(this).apply(this.replaceVariables().apply(str)));
+    }
+
+    /**
+     * Replaces %task_amount_<taskId>%, %task_current_<taskId>% and %task_left_<taskId>% placeholders
+     * with values of the active task. Values are totals (scaled amount included).
+     * Unknown or inactive tasks give 0.
+     */
+    @NotNull
+    public UnaryOperator<String> replaceTaskPlaceholders() {
+        return str -> {
+            if (!str.contains("%task_")) return str;
+
+            Matcher matcher = Placeholders.TASK_BY_ID.matcher(str);
+            return matcher.replaceAll(result -> {
+                String type = result.group(1);
+                String taskId = result.group(2);
+
+                TaskProgress progress = this.findTaskProgress(taskId);
+                if (progress == null) return "0";
+
+                int value = switch (type) {
+                    case "amount" -> progress.getRequiredAmount();
+                    case "current" -> progress.countProgress();
+                    default -> progress.countLeftover();
+                };
+                return String.valueOf(value);
+            });
+        };
+    }
+
+    @Nullable
+    private TaskProgress findTaskProgress(@NotNull String taskId) {
+        for (var entry : this.taskProgress.entrySet()) {
+            if (entry.getKey().getId().equalsIgnoreCase(taskId)) return entry.getValue();
+        }
+        return null;
     }
 
     @NotNull
@@ -375,7 +412,7 @@ public class DungeonInstance implements Dungeon {
             this.broadcastEvent(new DungeonTaskFinishedEvent(this, stageTask, progress));
             this.broadcast(Lang.DUNGEON_TASK_COMPLETED_INFO, replacer -> replacer
                     .replace(this.replacePlaceholders())
-                    .replace(Placeholders.GENERIC_NAME, stageTask.getParams().getDisplay())
+                    .replace(Placeholders.GENERIC_NAME, stageTask.formatDisplay(this, progress, null))
             );
         });
     }
@@ -527,12 +564,12 @@ public class DungeonInstance implements Dungeon {
         if (mode == ItemFilterMode.NONE) return;
 
         ItemFilterCriteria criteria = this.config.features().getItemFilterCriteria();
+        boolean scanContainers = this.config.features().isItemFilterScanContainers();
 
         for (ItemStack itemStack : player.getInventory().getContents()) {
             if (itemStack == null) continue;
 
-            boolean matched = criteria.matches(itemStack);
-            boolean needConfiscated = (mode == ItemFilterMode.BAN_SPECIFIC && matched) || (mode == ItemFilterMode.ALLOW_SPECIFIC && !matched);
+            boolean needConfiscated = criteria.shouldConfiscate(mode, itemStack, scanContainers);
 
             if (needConfiscated) {
                 confiscate.add(new ItemStack(itemStack));
@@ -1040,7 +1077,7 @@ public class DungeonInstance implements Dungeon {
 
         this.broadcast((isPersonal ? Lang.DUNGEON_TASK_CREATED_PERSONAL : Lang.DUNGEON_TASK_CREATED_GLOBAL), (player, replacer) -> replacer
                 .replace(this.replacePlaceholders())
-                .replace(Placeholders.GENERIC_NAME, stageTask.getParams().getDisplay())
+                .replace(Placeholders.GENERIC_NAME, stageTask.formatDisplay(this, progress, isPersonal ? player : null))
                 .replace(Placeholders.GENERIC_VALUE, progress.format(isPersonal ? player : null)));
 
         this.broadcastEvent(new DungeonTaskCreatedEvent(this, stageTask, progress));

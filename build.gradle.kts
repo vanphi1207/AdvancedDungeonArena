@@ -6,7 +6,7 @@ plugins {
 
 allprojects {
     group = "su.nightexpress.dungeonarena"
-    version = "8.7.0"
+    version = "8.8.0"
 
     repositories {
         mavenLocal()
