@@ -54,7 +54,7 @@ public class StageTask implements Writeable {
     @NotNull
     public TaskProgress createProgress(@NotNull DungeonInstance dungeon) {
         ProgressFormatter formatter = this.task.getFormatter();
-        int requiredAmount = this.params.getAmount().roll();
+        int requiredAmount = this.params.rollAmount(dungeon);
 
         if (this.params.isPerPlayer() && this.task.canBePerPlayer()) {
             int players = dungeon.getAlivePlayers().size();
